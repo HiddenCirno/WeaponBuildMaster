@@ -139,6 +139,7 @@ namespace WeaponBuildMaster
                     GUIUtility.systemCopyBuffer = jsonExport; // 直接塞进剪贴板！
 
                     Console.WriteLine("====== [星火计划] JSON 导出成功并已复制到剪贴板 ======\n" + jsonExport);
+                    Console.WriteLine($"改枪码导出成功! 代码:{EncodeSparkCode(rawTree)}");
                 }
                 else
                 {
@@ -176,10 +177,10 @@ namespace WeaponBuildMaster
                 }
 
                 // 第二关：尝试反序列化 (防呆，防止玩家乱贴别的文本)
-                List<RawWeaponNode> importedTree = null;
+                List<RawWeaponNode> importedTree = DecodeSparkCode(clipboardText);
                 try
                 {
-                    importedTree = Newtonsoft.Json.JsonConvert.DeserializeObject<List<RawWeaponNode>>(clipboardText);
+                    //importedTree = Newtonsoft.Json.JsonConvert.DeserializeObject<List<RawWeaponNode>>(clipboardText);
                 }
                 catch (Exception ex)
                 {
