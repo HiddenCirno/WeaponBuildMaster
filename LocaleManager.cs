@@ -53,10 +53,10 @@ namespace WeaponBuildMaster
             //生成配置项
             CurrentLanguage = config.Bind(
                 "Language / 语言",
-                "HUD Language / HUD 界面语言",
+                "Language / 语言设置",
                 availableLanguages.Contains(FallbackLangName) ? FallbackLangName : availableLanguages[0],
                 new ConfigDescription(
-                    "Change HUD UI's display language (Applies immediately). / 更改游戏内 HUD 界面的显示语言（即时生效）。",
+                    "Change display language (Applies immediately). / 更改游戏内Mod内容的显示语言（即时生效）。",
                     new AcceptableValueList<string>(availableLanguages.ToArray()) // <--- 动态下拉框
                 ));
         }
