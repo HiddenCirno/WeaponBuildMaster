@@ -139,9 +139,17 @@ namespace WeaponBuildMaster
                     GUIUtility.systemCopyBuffer = jsonExport; // 直接塞进剪贴板！
 
                     Console.WriteLine("====== [星火计划] JSON 导出成功并已复制到剪贴板 ======\n" + jsonExport);
-                    var weaponcode = EncodeSparkCode(rawTree);
-                    GUIUtility.systemCopyBuffer = weaponcode;
-                    Console.WriteLine($"改枪码导出成功! 代码:{weaponcode}");
+                    string base64Data = EncodeSparkCode(rawTree);
+
+                    // 获取本地化的武器名称
+                    string weaponName = currentWeapon.Name.Localized();
+
+                    // 组装最终的“星火分享码” (第一行是头+数据，第二行是玩家信息)
+                    string weaponCode = $"SPT-ProjectSpark-WBM-{base64Data}\n玩家XXX分享了他的改枪码: {weaponName}";
+
+                    // 写入剪贴板
+                    GUIUtility.systemCopyBuffer = weaponCode;
+                    Console.WriteLine($"改枪码导出成功! 代码:{weaponCode}");
                 }
                 else
                 {
@@ -389,14 +397,35 @@ namespace WeaponBuildMaster
         }
 
         // 2. 核心解码方法：Base64 -> 节点树
-        public static List<RawWeaponNode> DecodeSparkCode(string sparkCode)
+        public static List<RawWeaponNode> DecodeSparkCode(string clipboardText)
         {
             List<RawWeaponNode> rawTree = new List<RawWeaponNode>();
 
             try
             {
+                string text = clipboardText.Trim();
+                string base64Data = text;
+
+                string[] lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                if (lines.Length > 0)
+                {
+                    string firstLine = lines[0];
+                    string prefix = "SPT-ProjectSpark-WBM-";
+
+                    // 2. 掐掉文件头
+                    if (firstLine.StartsWith(prefix))
+                    {
+                        base64Data = firstLine.Substring(prefix.Length);
+                    }
+                    else
+                    {
+                        // 极佳的鲁棒性：如果玩家只复制了中间的乱码（没有头），我们也放行
+                        base64Data = firstLine;
+                    }
+                }
+
                 // 将 Base64 乱码还原为真实的内存字节流
-                byte[] data = Convert.FromBase64String(sparkCode.Trim()); // 去除可能误复制的空格
+                byte[] data = Convert.FromBase64String(base64Data);
 
                 // 【防呆护盾】：15 字节校验！如果不是 15 的倍数，说明代码被篡改或复制不全
                 if (data.Length % 15 != 0)
