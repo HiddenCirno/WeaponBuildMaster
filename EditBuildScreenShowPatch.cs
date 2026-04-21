@@ -139,7 +139,9 @@ namespace WeaponBuildMaster
                     GUIUtility.systemCopyBuffer = jsonExport; // 直接塞进剪贴板！
 
                     Console.WriteLine("====== [星火计划] JSON 导出成功并已复制到剪贴板 ======\n" + jsonExport);
-                    Console.WriteLine($"改枪码导出成功! 代码:{EncodeSparkCode(rawTree)}");
+                    var weaponcode = EncodeSparkCode(rawTree);
+                    GUIUtility.systemCopyBuffer = weaponcode;
+                    Console.WriteLine($"改枪码导出成功! 代码:{weaponcode}");
                 }
                 else
                 {
