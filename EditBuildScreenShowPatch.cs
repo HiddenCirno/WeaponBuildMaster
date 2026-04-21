@@ -222,28 +222,41 @@ namespace WeaponBuildMaster
 
                 Console.WriteLine("[通行] 前置校验全部通过！准备进行虚空造物...");
                 // TODO: 下一步，应用数据逻辑！
+                // ==========================================
+                // 第五关：虚空造物与拼装 (The Magic Happens Here)
+                // ==========================================
                 try
                 {
                     ItemFactoryClass itemFactory = Comfort.Common.Singleton<ItemFactoryClass>.Instance;
 
-                    // 1. 字典缓存：记录 JSON 里的老 ID 对应我们在内存里新造出来的 Item
                     Dictionary<string, Item> memoryItems = new Dictionary<string, Item>();
                     Item newRootWeapon = null;
+
+                    // 记录缺失的物品 TPL，用于向玩家报错
+                    List<string> missingItemsTpl = new List<string>();
 
                     // 2. 遍历 JSON 列表，先把所有的零件“无中生有”地造出来
                     foreach (var node in importedTree)
                     {
-                        // 为了防止导入的预设 ID 和玩家仓库里的物品冲突，我们生成全新的 24 位 Hex 字符串作为 MongoID
                         string freshId = Guid.NewGuid().ToString("N").Substring(0, 24);
 
-                        // 塔科夫标准造物 API：CreateItem
-                        Item newItem = itemFactory.CreateItem(new MongoID(freshId), node.tpl, null);
+                        // 尝试创建物品
+                        Item newItem = null;
+                        try
+                        {
+                            newItem = itemFactory.CreateItem(new MongoID(freshId), node.tpl, null);
+                        }
+                        catch
+                        {
+                            // 有些极端情况下 CreateItem 会直接抛异常而不是返回 null
+                            newItem = null;
+                        }
 
+                        // 【空物品防御：严格熔断机制】
                         if (newItem != null)
                         {
                             memoryItems[node.id] = newItem;
 
-                            // 如果这是没有 parent 的根节点，标记为武器本体
                             if (string.IsNullOrEmpty(node.parent))
                             {
                                 newRootWeapon = newItem;
@@ -251,36 +264,43 @@ namespace WeaponBuildMaster
                         }
                         else
                         {
-                            Console.WriteLine($"[造物失败] 无法识别的物品 TPL: {node.tpl}");
-                            return; // 如果造不出某个核心零件，直接终止导入
+                            missingItemsTpl.Add(node.tpl);
+                            Console.WriteLine($"[造物失败] 无法在当前客户端找到物品 TPL: {node.tpl} (可能是第三方Mod物品或已被废弃)");
                         }
                     }
 
+                    // 如果存在任何缺失的物品，执行熔断！
+                    if (missingItemsTpl.Count > 0)
+                    {
+                        Console.WriteLine($"[致命拦截] 发现 {missingItemsTpl.Count} 个缺失物品，导入已终止。");
+
+                        // 调用塔科夫原生的右下角弹窗系统，弹出红色错误提示
+                        NotificationManagerClass.DisplayWarningNotification(
+                            $"星火计划导入失败！\n此分享码包含了您当前游戏中不存在的物品 (可能需要特定的 Mod)。\n缺失数量: {missingItemsTpl.Count}"
+                        );
+                        return; // 彻底终止后续的组装和 UI 刷新
+                    }
+
                     // 3. 按照 parent 和 slotIndex，把散落的零件像乐高一样拼起来
+                    // ... (这部分代码保持你上一版优化后的 Index 寻址逻辑不变) ...
                     foreach (var node in importedTree)
                     {
-                        // 根节点（或 index 为 0）不需要找爸爸
                         if (string.IsNullOrEmpty(node.parent) || node.slotIndex == 0) continue;
 
+                        // 由于前面有了严格的熔断机制，走到这里 memoryItems 绝对是完整无缺的
                         Item childItem = memoryItems[node.id];
 
-                        // 找到它的父节点
                         if (memoryItems.TryGetValue(node.parent, out Item parentItem))
                         {
                             if (parentItem is CompoundItem compoundParent)
                             {
-                                // 【核心修改】：抛弃 slotId 字符串，直接用 Index 计算真实数组下标！
-                                // 导出时加了 1，导入时减掉 1
                                 int actualSlotIndex = node.slotIndex - 1;
 
-                                // 【防呆护盾】：严格检查数组越界！
-                                // 如果未来塔科夫更新删除了某个槽位，直接拦截，防止 IndexOutOfRangeException 搞崩游戏
                                 if (actualSlotIndex >= 0 && actualSlotIndex < compoundParent.Slots.Length)
                                 {
-                                    // $O(1)$ 极速定位槽位！
                                     Slot targetSlot = compoundParent.Slots[actualSlotIndex];
-
                                     var addResult = targetSlot.AddWithoutRestrictions(childItem);
+
                                     if (addResult.Failed)
                                     {
                                         Console.WriteLine($"[拼装警告] 强制安装 {childItem.Name.Localized()} 到槽位 {actualSlotIndex} 失败: {addResult.Error}");
@@ -288,7 +308,7 @@ namespace WeaponBuildMaster
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"[致命越界] 物品 {parentItem.Name.Localized()} 根本没有第 {actualSlotIndex} 个槽位！(总槽位数量: {compoundParent.Slots.Length})");
+                                    Console.WriteLine($"[致命越界] 物品 {parentItem.Name.Localized()} 根本没有第 {actualSlotIndex} 个槽位！");
                                 }
                             }
                         }
@@ -301,16 +321,17 @@ namespace WeaponBuildMaster
                     {
                         Console.WriteLine("[星火计划] 树结构拼装完毕，正在推送到游戏 UI...");
 
-                        // 伪造一个 WeaponBuildClass 骗过底层的 method_31
                         string presetName = "⭐星火计划导入预设";
                         WeaponBuildClass fakeBuild = new WeaponBuildClass(new MongoID(Guid.NewGuid().ToString("N").Substring(0, 24)), presetName, presetName, finalWeapon, false);
 
-                        // 通过反射调用 method_31，触发整个界面的刷新链路
                         MethodInfo method31 = AccessTools.Method(typeof(EditBuildScreen), "method_31");
                         if (method31 != null)
                         {
                             method31.Invoke(__instance, new object[] { fakeBuild });
                             Console.WriteLine("====== [星火计划] 导入大获成功！ ======");
+
+                            // 导入成功时，弹出一个绿色的成功通知
+                            NotificationManagerClass.DisplayMessageNotification("星火计划改枪码导入成功！");
                         }
                         else
                         {
@@ -321,6 +342,7 @@ namespace WeaponBuildMaster
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[星火计划-导入崩溃] {ex.Message}\n{ex.StackTrace}");
+                    NotificationManagerClass.DisplayWarningNotification("星火计划遇到内部错误，导入失败，请查看控制台日志。");
                 }
             });
 
