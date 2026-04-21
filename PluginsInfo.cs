@@ -1,0 +1,13 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace EFTBallisticCalculator
+{
+    public class PluginsInfo
+    {
+        public const string GUID = "hiddenhiragi.projectspark.weaponbuildmaster";
+        public const string NAME = "Weapon Build Master";
+        public const string VERSION = "1.1.0";
+    }
+}
