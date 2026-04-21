@@ -44,7 +44,6 @@ namespace WeaponBuildMaster
                     Console.WriteLine($"[EFTBallisticCalculator] UI Locale Load Error ({file}): {e.Message}");
                 }
             }
-
             //空字典防御
             if (availableLanguages.Count == 0)
             {
@@ -64,19 +63,17 @@ namespace WeaponBuildMaster
 
         public static string Get(string key)
         {
-            // 1. 尝试从当前选择的语言中获取
+            //读取当前语言
             if (_loadedTranslations.TryGetValue(CurrentLanguage.Value, out var currentDict))
             {
                 if (currentDict.TryGetValue(key, out var text)) return text;
             }
-
-            // 2. 如果没找到，尝试从回退语言（英文）中获取
+            //fallback
             if (_loadedTranslations.TryGetValue(FallbackLangName, out var fallbackDict))
             {
                 if (fallbackDict.TryGetValue(key, out var fallbackText)) return fallbackText;
             }
-
-            // 3. 终极防呆，返回 Key 原文
+            //fallback都读不到, 返回key
             return key;
         }
     }
