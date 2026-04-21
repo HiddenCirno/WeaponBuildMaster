@@ -36,9 +36,9 @@ namespace WeaponBuildMaster
             if (ScreenInstance == null) return;
 
             // 文本防篡改（根据不同的按钮锁定不同的名字）
-            if (_buttonText != null && !string.IsNullOrEmpty(TargetText) && _buttonText.text != TargetText)
+            if (_buttonText != null && !string.IsNullOrEmpty(TargetText) && _buttonText.text != LocaleManager.Get(TargetText))
             {
-                _buttonText.text = TargetText;
+                _buttonText.text = LocaleManager.Get(TargetText);
             }
 
             // 暴力常亮
@@ -168,7 +168,7 @@ namespace WeaponBuildMaster
 
             var expUpdater = exportButton.gameObject.AddComponent<SparkButtonUpdater>();
             expUpdater.ScreenInstance = __instance;
-            expUpdater.TargetText = LocaleManager.Get("wbm_export_button");//"导出星火码"; // 锁定文字
+            expUpdater.TargetText = "wbm_export_button";//"导出星火码"; // 锁定文字
             if (exportButton.gameObject.GetComponent<CanvasGroup>() == null) exportButton.gameObject.AddComponent<CanvasGroup>();
 
             // ==========================================
@@ -368,7 +368,7 @@ namespace WeaponBuildMaster
 
             var impUpdater = importButton.gameObject.AddComponent<SparkButtonUpdater>();
             impUpdater.ScreenInstance = __instance;
-            impUpdater.TargetText = LocaleManager.Get("wbm_import_button");//"导入星火码"; // 锁定文字
+            impUpdater.TargetText = "wbm_import_button";//"导入星火码"; // 锁定文字
             if (importButton.gameObject.GetComponent<CanvasGroup>() == null) importButton.gameObject.AddComponent<CanvasGroup>();
         }
     }

@@ -7,25 +7,23 @@ using System.Text;
 
 namespace WeaponBuildMaster
 {
+    //本地化管理器
     public static class LocaleManager
     {
+        //配置入口
+        //当前选择的语言, 默认为英语, 默认自带中英双语
         public static ConfigEntry<string> CurrentLanguage;
-
-        // 核心翻译字典：[语言名称 (如"简体中文") -> [Key -> 翻译文本]]
+        //存储载入的本地化字典
         private static readonly Dictionary<string, Dictionary<string, string>> _loadedTranslations = new Dictionary<string, Dictionary<string, string>>();
-
-        // 默认的回退语言名称（必须和 JSON 里的 "Language" 字段一致）
+        //fallback的语言
         private const string FallbackLangName = "English";
-
+        //配置初始化
         public static void Init(ConfigFile config)
         {
             string dirPath = Path.Combine(PluginsCore.pluginDir, "locales");
-            //if (!Directory.Exists(dirPath)) Directory.CreateDirectory(dirPath);
-
             _loadedTranslations.Clear();
             List<string> availableLanguages = new List<string>();
-
-            // 1. 遍历目录下所有的 json 文件 (不在乎文件名是什么)
+            //遍历文件
             string[] jsonFiles = Directory.GetFiles(dirPath, "*.json");
             foreach (string file in jsonFiles)
             {
@@ -36,7 +34,7 @@ namespace WeaponBuildMaster
 
                     if (data != null && !string.IsNullOrEmpty(data.Language) && data.Translate != null)
                     {
-                        // 2. 将读取到的语言名称和翻译字典存入内存
+                        //加载
                         _loadedTranslations[data.Language] = data.Translate;
                         availableLanguages.Add(data.Language);
                     }
@@ -47,14 +45,13 @@ namespace WeaponBuildMaster
                 }
             }
 
-            // 防呆：如果没有读到任何文件，给一个兜底选项
+            //空字典防御
             if (availableLanguages.Count == 0)
             {
                 availableLanguages.Add(FallbackLangName);
                 _loadedTranslations[FallbackLangName] = new Dictionary<string, string>();
             }
-
-            // 3. 动态生成 F12 的配置项（下拉菜单完全由读取到的语言名称构成！）
+            //生成配置项
             CurrentLanguage = config.Bind(
                 "Language / 语言",
                 "HUD Language / HUD 界面语言",
