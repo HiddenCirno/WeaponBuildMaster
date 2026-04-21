@@ -51,4 +51,9 @@
 			<Private>False</Private>
 		</Reference>
 	</ItemGroup>
+	<ItemGroup>
+		<None Update="locales\*.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 </Project>

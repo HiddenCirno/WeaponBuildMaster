@@ -1,0 +1,22 @@
+{
+    "Language": "简体中文",
+    "Translate": {
+        "wbm_default_player_name": "凡妮莎·帕斯卡",
+        "wbm_shared_code_text": "玩家 {0} 向你分享了改枪码",
+        "wbm_import_button": "导入改枪码",
+        "wbm_export_button": "导出改枪码",
+        "wbm_import_successful": "改枪码导入成功！已应用到预设。",
+        "wbm_export_successful": "改枪码导出成功！请检查你的剪贴板。",
+        "wbm_import_error_999": "错误999: 严重错误! 请阅读控制台日志以获取更多信息。",
+        "wbm_import_warn_101": "警告101: 无法从剪贴板读取任何数据！",
+        "wbm_import_warn_102": "警告102: 剪贴板内容不是有效的改枪码！",
+        "wbm_import_error_201": "错误201: 尝试导入的预设数据为空！",
+        "wbm_import_warn_103": "警告103: 你需要先选择一把武器！",
+        "wbm_error_warn_202": "错误202: 选中的武器与改枪码不匹配！",
+        "wbm_error_warn_300": "错误300: 无法在你的游戏中找到物品 {0}！",
+        "wbm_error_warn_301": "错误301: 导入失败！改枪码包含了 {0} 个你的游戏中不存在的物品。",
+        "wbm_error_warn_401": "错误401: 无法将 {0} 安装到槽位 {1}！",
+        "wbm_error_warn_402": "错误402: 无法将 {0} 安装到槽位 {1} (给定的索引超出了数组范围)！",
+        "wbm_error_warn_500": "错误500: 无法更新物品预览 (找不到核心方法 method_31)！"
+    }
+}

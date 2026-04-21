@@ -1,0 +1,22 @@
+{
+    "Language": "English",
+    "Translate": {
+        "wbm_default_player_name": "Vanessa Pasca",
+        "wbm_shared_code_text": "{0} shared a weapon build code with you",
+        "wbm_import_button": "IMPORT BUILD CODE",
+        "wbm_export_button": "EXPORT BUILD CODE",
+        "wbm_import_successful": "Weapon build code imported successfully!",
+        "wbm_export_successful": "Weapon build code exported successfully! Please check your clipboard.",
+        "wbm_import_error_999": "Error 999: Critical Error! Please check the console.",
+        "wbm_import_warn_101": "Warning 101: Clipboard does not contain valid data!",
+        "wbm_import_warn_102": "Warning 102: Clipboard content is not a valid build code!",
+        "wbm_import_error_201": "Error 201: The build you are trying to import is empty!",
+        "wbm_import_warn_103": "Warning 103: You need to select a base weapon first!",
+        "wbm_error_warn_202": "Error 202: The selected weapon does not match the build's base weapon!",
+        "wbm_error_warn_300": "Error 300: Could not find item {0} in your game!",
+        "wbm_error_warn_301": "Error 301: Import failed! The build contains {0} item(s) missing from your game.",
+        "wbm_error_warn_401": "Error 401: Could not add {0} to slot index {1}!",
+        "wbm_error_warn_402": "Error 402: Could not add {0} to slot index {1} (index out of range)!",
+        "wbm_error_warn_500": "Error 500: Could not update item preview (method_31 missing)!"
+    }
+}

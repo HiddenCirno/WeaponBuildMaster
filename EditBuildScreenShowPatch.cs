@@ -11,6 +11,7 @@ using TMPro;
 using UnityEngine;
 using System.IO;
 using UnityEngine.UI;
+using Fika.Core.Main.Utils;
 
 namespace WeaponBuildMaster
 {
@@ -72,12 +73,15 @@ namespace WeaponBuildMaster
         [PatchPostfix]
         private static void PatchPostfix(EditBuildScreen __instance)
         {
-            var originalButtonField = AccessTools.Field(typeof(EditBuildScreen), "_saveAsBuildButton");
-            Button originalButton = originalButtonField.GetValue(__instance) as Button;
+            var originalButtonSaveField = AccessTools.Field(typeof(EditBuildScreen), "_saveAsBuildButton");
+            Button originalButtonSave = originalButtonSaveField.GetValue(__instance) as Button;
+            var originalButtonOpenField = AccessTools.Field(typeof(EditBuildScreen), "_openBuildButton"); //_openBuildButton
+            Button originalButtonOpen = originalButtonOpenField.GetValue(__instance) as Button;
 
-            if (originalButton == null) return;
 
-            Transform parent = originalButton.transform.parent;
+            if (originalButtonSave == null || originalButtonOpen == null) return;
+
+            Transform parent = originalButtonSave.transform.parent;
 
             // 检查我们的按钮是不是已经存在了
             Transform existingExport = parent.Find("SparkExportButton");
@@ -93,7 +97,7 @@ namespace WeaponBuildMaster
             // ==========================================
             // 1. 创建【导出按钮】
             // ==========================================
-            Button exportButton = UnityEngine.Object.Instantiate(originalButton);
+            Button exportButton = UnityEngine.Object.Instantiate(originalButtonSave);
             exportButton.name = "SparkExportButton";
             exportButton.transform.SetParent(parent, false);
             exportButton.gameObject.SetActive(true);
@@ -138,34 +142,39 @@ namespace WeaponBuildMaster
                     string jsonExport = Newtonsoft.Json.JsonConvert.SerializeObject(rawTree, Newtonsoft.Json.Formatting.Indented);
                     GUIUtility.systemCopyBuffer = jsonExport; // 直接塞进剪贴板！
 
-                    Console.WriteLine("====== [星火计划] JSON 导出成功并已复制到剪贴板 ======\n" + jsonExport);
-                    string base64Data = EncodeSparkCode(rawTree);
+                    Console.WriteLine("====== [枪匠大师]: JSON 导出成功并已复制到剪贴板 ======\n");// + jsonExport);
+                    string base64Data = PresetCodeUtils.EncodeSparkCode(rawTree);
 
                     // 获取本地化的武器名称
                     string weaponName = currentWeapon.Name.Localized();
 
+                    //var profile = Traverse.Create(__instance).Property("Profile").GetValue<Profile>();
+                    var profile = AccessTools.Field(typeof(EditBuildScreen), "profile_0").GetValue(__instance) as Profile;
+                    string playerName = profile?.Nickname ?? LocaleManager.Get("wbm_default_player_name");//"神秘的PMC";
+
                     // 组装最终的“星火分享码” (第一行是头+数据，第二行是玩家信息)
-                    string weaponCode = $"SPT-ProjectSpark-WBM-{base64Data}\n玩家XXX分享了他的改枪码: {weaponName}";
+                    string weaponCode = $"SPT-ProjectSpark-WBM-{base64Data}\n{string.Format(LocaleManager.Get("wbm_shared_code_text"), playerName)}: {weaponName}";
 
                     // 写入剪贴板
                     GUIUtility.systemCopyBuffer = weaponCode;
-                    Console.WriteLine($"改枪码导出成功! 代码:{weaponCode}");
+                    Console.WriteLine($"[枪匠大师]: 改枪码导出成功! 代码:{weaponCode}");
+                    PresetCodeUtils.ShowMessage(LocaleManager.Get("wbm_export_successful"));
                 }
                 else
                 {
-                    Console.WriteLine("当前工作台上没有有效的武器！");
+                    Console.WriteLine("[枪匠大师]: 当前工作台上没有有效的武器！");
                 }
             });
 
             var expUpdater = exportButton.gameObject.AddComponent<SparkButtonUpdater>();
             expUpdater.ScreenInstance = __instance;
-            expUpdater.TargetText = "导出星火码"; // 锁定文字
+            expUpdater.TargetText = LocaleManager.Get("wbm_export_button");//"导出星火码"; // 锁定文字
             if (exportButton.gameObject.GetComponent<CanvasGroup>() == null) exportButton.gameObject.AddComponent<CanvasGroup>();
 
             // ==========================================
             // 2. 创建【导入按钮】
             // ==========================================
-            Button importButton = UnityEngine.Object.Instantiate(originalButton);
+            Button importButton = UnityEngine.Object.Instantiate(originalButtonOpen);
             importButton.name = "SparkImportButton";
             importButton.transform.SetParent(parent, false);
             importButton.gameObject.SetActive(true);
@@ -176,31 +185,34 @@ namespace WeaponBuildMaster
             importButton.onClick.RemoveAllListeners();
             importButton.onClick.AddListener(() =>
             {
-                Console.WriteLine("====== [星火计划] 尝试导入数据 ======");
+                Console.WriteLine("====== [枪匠大师]: 尝试导入数据 ======");
 
                 // 第一关：尝试获取剪贴板
                 string clipboardText = GUIUtility.systemCopyBuffer;
                 if (string.IsNullOrWhiteSpace(clipboardText))
                 {
-                    Console.WriteLine("[拦截] 剪贴板为空！");
+                    Console.WriteLine("[枪匠大师]: 剪贴板为空！");
+                    PresetCodeUtils.ShowErrorMessage(LocaleManager.Get("wbm_import_warn_101"));
                     return;
                 }
 
                 // 第二关：尝试反序列化 (防呆，防止玩家乱贴别的文本)
-                List<RawWeaponNode> importedTree = DecodeSparkCode(clipboardText);
+                List<RawWeaponNode> importedTree = PresetCodeUtils.DecodeSparkCode(clipboardText);
                 try
                 {
                     //importedTree = Newtonsoft.Json.JsonConvert.DeserializeObject<List<RawWeaponNode>>(clipboardText);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[拦截] 反序列化失败，剪贴板内容不是有效的预设 JSON。错误信息: {ex.Message}");
+                    Console.WriteLine($"[枪匠大师]: 反序列化失败，剪贴板内容不是有效的预设 JSON。错误信息: {ex.Message}");
+                    PresetCodeUtils.ShowErrorMessage(LocaleManager.Get("wbm_import_warn_102"));
                     return;
                 }
 
                 if (importedTree == null || importedTree.Count == 0)
                 {
-                    Console.WriteLine("[拦截] 导入的预设数据为空！");
+                    Console.WriteLine("[枪匠大师]: 导入的预设数据为空！");
+                    PresetCodeUtils.ShowErrorMessage(LocaleManager.Get("wbm_import_error_201"));
                     return;
                 }
 
@@ -208,19 +220,21 @@ namespace WeaponBuildMaster
                 Item currentWeapon = (Item)AccessTools.Field(typeof(EditBuildScreen), "Item").GetValue(__instance);
                 if (currentWeapon == null)
                 {
-                    Console.WriteLine("[拦截] 当前工作台上没有武器，无法作为基底导入！");
+                    Console.WriteLine("[枪匠大师]: 当前工作台上没有武器，无法作为基底导入！");
+                    PresetCodeUtils.ShowErrorMessage(LocaleManager.Get("wbm_import_warn_103"));
                     return;
                 }
 
                 // 第四关：基底 tpl 严格校验！防止 AK 导进 M4
                 if (importedTree[0].tpl != currentWeapon.TemplateId)
                 {
-                    Console.WriteLine($"[致命拦截] 基底不匹配！当前武器的 TPL: {currentWeapon.TemplateId}，预设基底的 TPL: {importedTree[0].tpl}");
+                    Console.WriteLine($"[枪匠大师]: 基底不匹配！当前武器的 TPL: {currentWeapon.TemplateId}，预设基底的 TPL: {importedTree[0].tpl}");
+                    PresetCodeUtils.ShowErrorMessage(LocaleManager.Get("wbm_error_warn_202"));
                     // TODO: 可以在这里调用塔科夫自带的 NotificationManagerClass.DisplayWarningNotification() 弹黄字警告玩家
                     return;
                 }
 
-                Console.WriteLine("[通行] 前置校验全部通过！准备进行虚空造物...");
+                Console.WriteLine("[枪匠大师]: 前置校验全部通过！准备进行构造...");
                 // TODO: 下一步，应用数据逻辑！
                 // ==========================================
                 // 第五关：虚空造物与拼装 (The Magic Happens Here)
@@ -265,19 +279,22 @@ namespace WeaponBuildMaster
                         else
                         {
                             missingItemsTpl.Add(node.tpl);
-                            Console.WriteLine($"[造物失败] 无法在当前客户端找到物品 TPL: {node.tpl} (可能是第三方Mod物品或已被废弃)");
+                            Console.WriteLine($"[枪匠大师]: 构建失败, 无法在当前客户端找到物品 TPL: {node.tpl} (可能是第三方Mod物品或已被删除)");
+                            PresetCodeUtils.ShowErrorMessage(string.Format(LocaleManager.Get("wbm_error_warn_300"), node.tpl));
                         }
                     }
 
                     // 如果存在任何缺失的物品，执行熔断！
                     if (missingItemsTpl.Count > 0)
                     {
-                        Console.WriteLine($"[致命拦截] 发现 {missingItemsTpl.Count} 个缺失物品，导入已终止。");
+                        Console.WriteLine($"[枪匠大师]: 致命错误! 发现 {missingItemsTpl.Count} 个缺失物品，导入已终止。");
 
                         // 调用塔科夫原生的右下角弹窗系统，弹出红色错误提示
-                        NotificationManagerClass.DisplayWarningNotification(
-                            $"星火计划导入失败！\n此分享码包含了您当前游戏中不存在的物品 (可能需要特定的 Mod)。\n缺失数量: {missingItemsTpl.Count}"
-                        );
+
+                        PresetCodeUtils.ShowErrorMessage(string.Format(LocaleManager.Get("wbm_error_warn_301"), missingItemsTpl.Count));
+                        //NotificationManagerClass.DisplayWarningNotification(
+                        //    $"改枪码导入失败！\n此分享码包含了您当前游戏中不存在的物品 (可能需要特定的 Mod)。\n缺失数量: {missingItemsTpl.Count}"
+                        //);
                         return; // 彻底终止后续的组装和 UI 刷新
                     }
 
@@ -303,12 +320,14 @@ namespace WeaponBuildMaster
 
                                     if (addResult.Failed)
                                     {
-                                        Console.WriteLine($"[拼装警告] 强制安装 {childItem.Name.Localized()} 到槽位 {actualSlotIndex} 失败: {addResult.Error}");
+                                        Console.WriteLine($"[枪匠大师]: 强制安装 {childItem.Name.Localized()} 到槽位 {actualSlotIndex} 失败: {addResult.Error}");
+                                        PresetCodeUtils.ShowErrorMessage(string.Format(LocaleManager.Get("wbm_error_warn_401"), childItem.Name.Localized(), actualSlotIndex));
                                     }
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"[致命越界] 物品 {parentItem.Name.Localized()} 根本没有第 {actualSlotIndex} 个槽位！");
+                                    Console.WriteLine($"[枪匠大师]: 物品 {parentItem.Name.Localized()} 根本没有第 {actualSlotIndex} 个槽位！");
+                                    PresetCodeUtils.ShowErrorMessage(string.Format(LocaleManager.Get("wbm_error_warn_402"), childItem.Name.Localized(), actualSlotIndex));
                                 }
                             }
                         }
@@ -319,184 +338,38 @@ namespace WeaponBuildMaster
                     // ==========================================
                     if (newRootWeapon != null && newRootWeapon is Weapon finalWeapon)
                     {
-                        Console.WriteLine("[星火计划] 树结构拼装完毕，正在推送到游戏 UI...");
+                        Console.WriteLine("[枪匠大师]: 树结构拼装完毕，正在推送到游戏 UI...");
 
-                        string presetName = "⭐星火计划导入预设";
+                        string presetName = "⭐改枪码导入预设";
                         WeaponBuildClass fakeBuild = new WeaponBuildClass(new MongoID(Guid.NewGuid().ToString("N").Substring(0, 24)), presetName, presetName, finalWeapon, false);
 
                         MethodInfo method31 = AccessTools.Method(typeof(EditBuildScreen), "method_31");
                         if (method31 != null)
                         {
                             method31.Invoke(__instance, new object[] { fakeBuild });
-                            Console.WriteLine("====== [星火计划] 导入大获成功！ ======");
+                            Console.WriteLine("====== [枪匠大师]: 导入成功！ ======");
 
                             // 导入成功时，弹出一个绿色的成功通知
-                            NotificationManagerClass.DisplayMessageNotification("星火计划改枪码导入成功！");
+                            PresetCodeUtils.ShowMessage(LocaleManager.Get("wbm_import_successful"));
                         }
                         else
                         {
-                            Console.WriteLine("[致命错误] 找不到刷新 UI 的 method_31！");
+                            Console.WriteLine("[枪匠大师]: 发生错误! 找不到刷新 UI 的 method_31！");
+                            PresetCodeUtils.ShowErrorMessage(LocaleManager.Get("wbm_error_warn_500"));
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[星火计划-导入崩溃] {ex.Message}\n{ex.StackTrace}");
-                    NotificationManagerClass.DisplayWarningNotification("星火计划遇到内部错误，导入失败，请查看控制台日志。");
+                    Console.WriteLine($"[枪匠大师]: 发生预料之外的错误! 错误信息: {ex.Message}\n{ex.StackTrace}");
+                    NotificationManagerClass.DisplayWarningNotification(LocaleManager.Get("wbm_import_error_999"));
                 }
             });
 
             var impUpdater = importButton.gameObject.AddComponent<SparkButtonUpdater>();
             impUpdater.ScreenInstance = __instance;
-            impUpdater.TargetText = "导入星火码"; // 锁定文字
+            impUpdater.TargetText = LocaleManager.Get("wbm_import_button");//"导入星火码"; // 锁定文字
             if (importButton.gameObject.GetComponent<CanvasGroup>() == null) importButton.gameObject.AddComponent<CanvasGroup>();
-        }
-        // 1. 先写一个辅助方法：把 24位字符串转为 12字节数组
-        public static byte[] HexStringToBytes(string hex)
-        {
-            byte[] bytes = new byte[12];
-            for (int i = 0; i < 12; i++)
-            {
-                bytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
-            }
-            return bytes;
-        }
-
-        // 2. 将你的 rawTree 压成 Base64 星火码
-        public static string EncodeSparkCode(List<RawWeaponNode> rawTree)
-        {
-            // 用 MemoryStream 和 BinaryWriter 高效写内存
-            using (MemoryStream ms = new MemoryStream())
-            using (BinaryWriter writer = new BinaryWriter(ms))
-            {
-                // 遍历你的 20 个节点
-                for (int i = 0; i < rawTree.Count; i++)
-                {
-                    var node = rawTree[i];
-
-                    // 1. 写入 12 字节的 TPL
-                    writer.Write(HexStringToBytes(node.tpl));
-
-                    // 2. 写入 1 字节的 自身 Index (由于你原来的逻辑里节点就是按顺序加进 List 的，直接用 i 即可)
-                    writer.Write((byte)i);
-
-                    // 3. 写入 1 字节的 Parent Index
-                    // 如果 parent 为空，写 255；否则去树里找那个 parent 的 index
-                    if (string.IsNullOrEmpty(node.parent))
-                    {
-                        writer.Write((byte)255);
-                    }
-                    else
-                    {
-                        // 找出父节点在列表里的下标
-                        int parentIndex = rawTree.FindIndex(n => n.id == node.parent);
-                        writer.Write((byte)parentIndex);
-                    }
-
-                    // 4. 写入 1 字节的 Slot Index
-                    // 同样，如果是根节点，写 255
-                    if (string.IsNullOrEmpty(node.slotId)) // 或者判断 slotIndex == 0
-                    {
-                        writer.Write((byte)255);
-                    }
-                    else
-                    {
-                        // 记得你导出时是从 1 开始的，如果想要 0-based，这里可以减 1，
-                        // 或者直接存进去，导入时减 1，全看你的喜好
-                        writer.Write((byte)node.slotIndex);
-                    }
-                }
-
-                // 全部写完后，把整个内存流转换成 Base64 字符串
-                return Convert.ToBase64String(ms.ToArray());
-            }
-        }
-        // 1. 辅助方法：把 12 字节数组还原回 24位 Hex 字符串 (TPL)
-        public static string BytesToHexString(byte[] bytes)
-        {
-            // BitConverter 会把数组变成 "AA-BB-CC..." 的形式，我们去掉横杠并转小写
-            return BitConverter.ToString(bytes).Replace("-", "").ToLower();
-        }
-
-        // 2. 核心解码方法：Base64 -> 节点树
-        public static List<RawWeaponNode> DecodeSparkCode(string clipboardText)
-        {
-            List<RawWeaponNode> rawTree = new List<RawWeaponNode>();
-
-            try
-            {
-                string text = clipboardText.Trim();
-                string base64Data = text;
-
-                string[] lines = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                if (lines.Length > 0)
-                {
-                    string firstLine = lines[0];
-                    string prefix = "SPT-ProjectSpark-WBM-";
-
-                    // 2. 掐掉文件头
-                    if (firstLine.StartsWith(prefix))
-                    {
-                        base64Data = firstLine.Substring(prefix.Length);
-                    }
-                    else
-                    {
-                        // 极佳的鲁棒性：如果玩家只复制了中间的乱码（没有头），我们也放行
-                        base64Data = firstLine;
-                    }
-                }
-
-                // 将 Base64 乱码还原为真实的内存字节流
-                byte[] data = Convert.FromBase64String(base64Data);
-
-                // 【防呆护盾】：15 字节校验！如果不是 15 的倍数，说明代码被篡改或复制不全
-                if (data.Length % 15 != 0)
-                {
-                    Console.WriteLine($"[星火计划-解码致命错误] 数据长度异常 ({data.Length} bytes)，非完整 15 字节区块！");
-                    return null;
-                }
-
-                using (MemoryStream ms = new MemoryStream(data))
-                using (BinaryReader reader = new BinaryReader(ms))
-                {
-                    int nodeCount = data.Length / 15;
-
-                    // 精准切割每一个 15 字节的节点区块
-                    for (int i = 0; i < nodeCount; i++)
-                    {
-                        // 1. 提取前 12 字节 -> 还原为 TPL
-                        byte[] tplBytes = reader.ReadBytes(12);
-                        string tpl = BytesToHexString(tplBytes);
-
-                        // 2. 提取后 3 字节 -> 还原关系网络
-                        byte selfIndex = reader.ReadByte();
-                        byte parentIndex = reader.ReadByte();
-                        byte slotIndex = reader.ReadByte();
-
-                        // 3. 重新组装成我们熟悉的 RawWeaponNode
-                        RawWeaponNode node = new RawWeaponNode();
-                        node.tpl = tpl;
-
-                        // 我们直接用 SelfIndex 的字符串形式作为临时关联 ID (完美对接 memoryItems)
-                        node.id = selfIndex.ToString();
-
-                        // 如果父级是 255 (0xFF)，说明是武器本体，没有爹
-                        node.parent = parentIndex == 255 ? "" : parentIndex.ToString();
-
-                        // 如果槽位是 255，说明是武器本体，槽位记为 0
-                        node.slotIndex = slotIndex == 255 ? 0 : slotIndex;
-
-                        rawTree.Add(node);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[星火计划-解码崩溃] Base64 解析失败，可能复制了非法的字符串。错误: {ex.Message}");
-                return null;
-            }
-
-            return rawTree;
         }
     }
 }
