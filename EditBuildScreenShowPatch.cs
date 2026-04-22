@@ -214,7 +214,7 @@ namespace WeaponBuildMaster
                 if (weaponTemplate != currentWeapon.TemplateId)
                 {
                     Console.WriteLine($"[枪匠大师]: 基底不匹配！当前武器的 TPL: {currentWeapon.TemplateId}，预设基底的 TPL: {weaponTemplate}");
-                    PresetCodeUtils.ShowErrorMessage(string.Format(LocaleManager.Get("wbm_error_warn_202"), weaponTemplate));
+                    PresetCodeUtils.ShowErrorMessage(string.Format(LocaleManager.Get("wbm_error_warn_202"), ($"{weaponTemplate} Name").Localized()));//干, 忘了本地化....
                     return;
                 }
                 //校验通过
