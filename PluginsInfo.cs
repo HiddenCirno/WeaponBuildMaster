@@ -9,6 +9,6 @@ namespace EFTBallisticCalculator
     {
         public const string GUID = "hiddenhiragi.projectspark.weaponbuildmaster";
         public const string NAME = "Weapon Build Master";
-        public const string VERSION = "1.0.0";
+        public const string VERSION = "1.1.0";
     }
 }

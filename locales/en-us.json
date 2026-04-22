@@ -12,7 +12,7 @@
         "wbm_import_warn_102": "Warning 102: Clipboard content is not a valid build code!",
         "wbm_import_error_201": "Error 201: The build you are trying to import is empty!",
         "wbm_import_warn_103": "Warning 103: You need to select a base weapon first!",
-        "wbm_error_warn_202": "Error 202: The selected weapon does not match the build's base weapon!",
+        "wbm_error_warn_202": "Error 202: The selected weapon does not match the build's base weapon! Expected is {0}",
         "wbm_error_warn_300": "Error 300: Could not find item {0} in your game!",
         "wbm_error_warn_301": "Error 301: Import failed! The build contains {0} item(s) missing from your game.",
         "wbm_error_warn_401": "Error 401: Could not add {0} to slot index {1}!",

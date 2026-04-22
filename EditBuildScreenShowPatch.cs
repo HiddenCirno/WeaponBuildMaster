@@ -210,10 +210,11 @@ namespace WeaponBuildMaster
                     return;
                 }
                 //校验
-                if (importedTree[0].tpl != currentWeapon.TemplateId)
+                var weaponTemplate = importedTree[0].tpl;
+                if (weaponTemplate != currentWeapon.TemplateId)
                 {
-                    Console.WriteLine($"[枪匠大师]: 基底不匹配！当前武器的 TPL: {currentWeapon.TemplateId}，预设基底的 TPL: {importedTree[0].tpl}");
-                    PresetCodeUtils.ShowErrorMessage(LocaleManager.Get("wbm_error_warn_202"));
+                    Console.WriteLine($"[枪匠大师]: 基底不匹配！当前武器的 TPL: {currentWeapon.TemplateId}，预设基底的 TPL: {weaponTemplate}");
+                    PresetCodeUtils.ShowErrorMessage(string.Format(LocaleManager.Get("wbm_error_warn_202"), weaponTemplate));
                     return;
                 }
                 //校验通过
