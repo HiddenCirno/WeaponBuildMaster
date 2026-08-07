@@ -1,17 +1,19 @@
 ﻿using EFT;
+using EFT.Communications;
 using EFT.InventoryLogic;
 using EFT.UI;
+using EFT.UI.Builds;
+using Fika.Core.Main.Utils;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using TMPro;
 using UnityEngine;
-using System.IO;
 using UnityEngine.UI;
-using Fika.Core.Main.Utils;
 
 namespace WeaponBuildMaster
 {
@@ -65,7 +67,7 @@ namespace WeaponBuildMaster
         protected override MethodBase GetTargetMethod()
         {
             return AccessTools.Method(typeof(EditBuildScreen), nameof(EditBuildScreen.Show),
-                new Type[] { typeof(Item), typeof(Item), typeof(InventoryController), typeof(ISession) });
+                new Type[] { typeof(Item), typeof(Item), typeof(InventoryController), typeof(IEftSession) });
         }
 
         [PatchPostfix]
@@ -140,7 +142,7 @@ namespace WeaponBuildMaster
                     string weaponName = currentWeapon.Name.Localized();
                     //反射获取玩家名字
                     //var profile = Traverse.Create(__instance).Property("Profile").GetValue<Profile>();
-                    var profile = AccessTools.Field(typeof(EditBuildScreen), "profile_0").GetValue(__instance) as Profile;
+                    var profile = AccessTools.Field(typeof(EditBuildScreen), "_profile").GetValue(__instance) as Profile;
                     string playerName = profile?.Nickname ?? LocaleManager.Get("wbm_default_player_name");//"神秘的PMC";
                     //组合改枪码
                     string weaponCode = $"SPT-ProjectSpark-WBM-{base64Data}\n{string.Format(LocaleManager.Get("wbm_shared_code_text"), playerName)}: {weaponName}";
@@ -223,7 +225,7 @@ namespace WeaponBuildMaster
                 try
                 {
                     //物品构造器实例, 单例
-                    ItemFactoryClass itemFactory = Comfort.Common.Singleton<ItemFactoryClass>.Instance;
+                    ItemFactory itemFactory = Comfort.Common.Singleton<ItemFactory>.Instance;
                     //存储节点
                     Dictionary<string, Item> memoryItems = new Dictionary<string, Item>();
                     Item newRootWeapon = null;
@@ -306,9 +308,9 @@ namespace WeaponBuildMaster
                         Console.WriteLine("[枪匠大师]: 树结构拼装完毕，正在推送到游戏 UI...");
                         //内存使用的预设名
                         string presetName = "⭐改枪码导入预设";
-                        WeaponBuildClass fakeBuild = new WeaponBuildClass(new MongoID(Guid.NewGuid().ToString("N").Substring(0, 24)), presetName, presetName, finalWeapon, false);
+                        WeaponBuild fakeBuild = new WeaponBuild(new MongoID(Guid.NewGuid().ToString("N").Substring(0, 24)), presetName, presetName, finalWeapon, false);
                         //反射调用方法, 更新显示
-                        MethodInfo method31 = AccessTools.Method(typeof(EditBuildScreen), "method_31");
+                        MethodInfo method31 = AccessTools.Method(typeof(EditBuildScreen), "OpenBuild");
                         if (method31 != null)
                         {
                             method31.Invoke(__instance, new object[] { fakeBuild });
@@ -319,7 +321,7 @@ namespace WeaponBuildMaster
                         else
                         {
                             //反射失败
-                            Console.WriteLine("[枪匠大师]: 发生错误! 找不到刷新 UI 的 method_31！");
+                            Console.WriteLine("[枪匠大师]: 发生错误! 找不到刷新 UI 的 OpenBuild！");
                             PresetCodeUtils.ShowErrorMessage(LocaleManager.Get("wbm_error_warn_500"));
                         }
                     }
@@ -328,7 +330,7 @@ namespace WeaponBuildMaster
                 {
                     //导入过程发生未知错误, 捕获并返回错误码999
                     Console.WriteLine($"[枪匠大师]: 发生预料之外的错误! 错误信息: {ex.Message}\n{ex.StackTrace}");
-                    NotificationManagerClass.DisplayWarningNotification(LocaleManager.Get("wbm_import_error_999"));
+                    NotificationManager.DisplayWarningNotification(LocaleManager.Get("wbm_import_error_999"));
                 }
             });
             //更新组件

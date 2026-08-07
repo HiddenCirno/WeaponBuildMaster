@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EFT.Communications;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -140,11 +141,11 @@ namespace WeaponBuildMaster
         //提示器封装
         public static void ShowMessage(string message)
         {
-            NotificationManagerClass.DisplayMessageNotification(message);
+            NotificationManager.DisplayMessageNotification(message);
         }
         public static void ShowErrorMessage(string message)
         {
-            NotificationManagerClass.DisplayWarningNotification(message);
+            NotificationManager.DisplayWarningNotification(message);
         }
     }
 }
